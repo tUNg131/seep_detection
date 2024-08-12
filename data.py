@@ -28,7 +28,7 @@ class SeepDataset(torch.utils.data.Dataset):
         mask = cv2.imread(self.mask_path + img_id, cv2.IMREAD_UNCHANGED)
         mask = torch.from_numpy(mask).type(torch.LongTensor)
 
-        return img, mask
+        return img, mask, img_id
 
     def __len__(self):
         return len(self.data_list)

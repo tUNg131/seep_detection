@@ -1,5 +1,6 @@
 __pycache__/
 model/
+output/
 .ipynb_checkpoints/
 notebooks/
 .DS_Store

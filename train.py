@@ -1,5 +1,6 @@
 import os
 
+import cv2
 import torch
 import torch.nn as nn
 import torch.utils.data as data
@@ -36,7 +37,7 @@ def train_one_epoch(epoch_index):
 		cnt = 0
 
 		for i, data in enumerate(train_loader):
-				inputs, labels = data
+				inputs, labels, _ = data
 				
 				inputs = inputs.to(device)
 				labels = labels.to(device)
@@ -68,7 +69,7 @@ for epoch_index in range(1, epochs + 1):
 		model.eval()
 		with torch.no_grad():
 				for i, vdata in enumerate(val_loader):
-						vinputs, vlabels = vdata
+						vinputs, vlabels, _ = vdata
 
 						vinputs = vinputs.to(device)
 						vlabels = vlabels.to(device)
@@ -82,8 +83,45 @@ for epoch_index in range(1, epochs + 1):
 		val_loss /= cnt	
 
 		if val_loss < best_val_loss:
+				try:
+						os.remove(f"model/unet_{best_val_loss}")
+				except:
+						pass
 				best_val_loss = val_loss
 				os.makedirs("model", exist_ok=True)
-				path = f"model/model_{epoch_index}"
+				path = f"model/unet_{best_val_loss}"
 				torch.save(model.state_dict(), path)
 		print(f"Epoch {epoch_index} | train_loss: {train_loss} | val_loss: {val_loss}")
+
+# Testing
+model.load_state_dict(torch.load(f"model/unet_{best_val_loss}"))
+print(f"Loaded unet_{best_val_loss}")
+
+test_loss = 0.
+cnt = 0
+
+model.eval()
+
+os.makedirs("output", exist_ok=True)
+
+with torch.no_grad():
+		for i, tdata in enumerate(val_loader):
+				tinputs, tlabels, img_ids = tdata
+
+				tinputs = tinputs.to(device)
+				tlabels = tlabels.to(device)
+
+				toutputs = model(tinputs)
+				
+				predictions = torch.argmax(toutputs, dim=1)
+				predictions = torch.chunk(predictions, chunks=val_batch_size, dim=0)
+				
+				for pred, img_id in zip(predictions, img_ids):
+						pred = torch.squeeze(pred, dim=0)
+						cv2.imwrite(f"output/{img_id}", pred.cpu().numpy())
+
+				tloss = loss_fn(toutputs, tlabels)
+				test_loss += tloss.item()
+				cnt += 1		
+		test_loss /= cnt
+print(f"Training completed | test_loss: {test_loss}")
