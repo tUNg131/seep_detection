@@ -1,0 +1,5 @@
+__pycache__/
+model/
+.ipynb_checkpoints/
+notebooks/
+.DS_Store
